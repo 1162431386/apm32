@@ -1,0 +1,108 @@
+你把板子重启下
+先测第一个测试用例
+
+好的
+
+手机连了没
+手机关机-->启动采样-->启动测试-->手机开机-->等待1分钟-->停止采样-->停止测试
+
+
+haode
+协议文档呢
+打开一下好的
+
+你现在完整的执行一遍测试过程：
+手机关机-->启动采样-->启动测试-->手机开机-->等待1分钟-->停止采样-->停止测试
+好的
+
+开机了
+再来一遍
+好
+现在手机什么状态
+
+刚开机
+你先关机
+好
+关机了
+好的，先别开机
+
+现在开机
+开机了
+======================================
+你先关机，终端
+关了
+开下机，然后启动测试用例2
+好
+接口协议打开下
+是跟上层的吗
+是ok
+现在终端什么状态上电
+串口怎么打不开
+我看一下
+你这代码是不是重新生成过？没动过
+现在是关机状态码
+不
+你现在用示波器测下vcc
+
+好
+原理图呢
+等下
+这个线飞了没
+飞了
+开下机
+好
+关机
+好
+关了说下关了
+现在没开吧嗯
+开机好
+关机h
+开下额
+开了吗
+额
+=============================
+1. main的主处理流程，是一个状态机
+    其状态转移的条件是， 上位机传下来的指令， 如开始采样， 开始测试，停止采样，停止测试
+    上电后的初始状态是INIT_STATE， 进行必要的系统初始化，包括：GPIO, DMA(ADC的)，时钟采样定时器TIM4,USB串口，和用作记时戳的RTC。。
+2. 初始化完后，立即转入IDLE_STATE, 在IDLEstate中等待采样开始指令，
+            if (StartSamplingFlag == 1) {
+							  startup_info_report();
+                workState = SAMPLE_STATE;
+            }
+  如果等到了，向上位机发一个startup消息，然后进入SAMPLE_STATE;
+3. SAMPLE_STATE刚开始，先进行ADC的初始化，
+                HAL_ADCEx_Calibration_Start(&hadc1);
+                HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&ADC_value, ADC_CHANNEL_CNT);
+  然后开始采样：
+      sendLen = ADC_MultiChannelPolling(sendBuf);
+  采样函数中：
+     ADC_MultiChannelPolling：
+     每次采4个通道， ch0：vcc； ch1： clk， ch2：IO, ch3: RST，  总共采32次
+     采样一直在进行，采满32次后，会把所有数据dma到ADC_value数组中
+     然后， 循环处理32组数据， 采取的原则是前后两次采样的数据如果不一样，才往上位机发，一样，则不处理
+    所有的采样数据按照这个原则处理后，封装到packet数组中，按协议组包，往上位机发送。
+                sendLen = ADC_MultiChannelPolling(sendBuf);
+                CDC_Transmit_FS(sendBuf, sendLen);
+   采样过程中，会判断是否开始测试，
+               if (LauchTestCaseFlag == 1)
+   如果上位机发送开始测试， 那么
+              进入switch(g_caseNumber){} 执行采样相关的测试用例（如1，2，3，4，5）
+4. 每一个采样相关的测试用例：
+    也是按照状态机设计，以1.8v终端上电过程举例：
+   te_init_pwr_seq 判断上电状态， 电源稳定后转入 te_1v8_pwr_seq，按7816协议规定的状态进行判断，等待时钟稳定后，等待电压从1.8v转到3.3v，再判断3.3v的状态
+   te_2nd_3v3_pwr_seq。
+   流程就是按照测试用例规定的流程设计的：
+1) When the UE is soft powered on, the contacts of the UICC-Terminal interface shall be activated to 1,8 V mode 
+in the following order: 
+- VCC at state H and stable; 
+- CLK stable; 
+- RST at state L for at least 400 clock cycles after the clock signal is applied to CLK; 
+- I/O at state Z within 200 clock cycles after the clock signal is applied to CLK. 
+2) For a 1,8 V Technology Terminal: When the UICC - Terminal interface is being activated after the 1,8 V/3 V 
+switching the contacts shall be activated to 3 V mode in the order given in 1). 
+
+
+  
+   
+ 
+
