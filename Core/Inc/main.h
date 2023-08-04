@@ -57,46 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define CLK_CTRL1_Pin GPIO_PIN_11
-#define CLK_CTRL1_GPIO_Port GPIOF
-#define CLK_CTRL2_Pin GPIO_PIN_12
-#define CLK_CTRL2_GPIO_Port GPIOF
-#define AMPCTRL0_Pin GPIO_PIN_0
-#define AMPCTRL0_GPIO_Port GPIOG
-#define AMPCTRL2_Pin GPIO_PIN_7
-#define AMPCTRL2_GPIO_Port GPIOE
-#define AMPCTRL3_Pin GPIO_PIN_8
-#define AMPCTRL3_GPIO_Port GPIOE
-#define AMPCTRL1_Pin GPIO_PIN_9
-#define AMPCTRL1_GPIO_Port GPIOE
-#define AMPCTRL4_Pin GPIO_PIN_10
-#define AMPCTRL4_GPIO_Port GPIOE
-#define CLK_CTRL0_Pin GPIO_PIN_11
-#define CLK_CTRL0_GPIO_Port GPIOE
-#define VCC_T50K_Pin GPIO_PIN_13
-#define VCC_T50K_GPIO_Port GPIOE
-#define VCC_T30K_Pin GPIO_PIN_14
-#define VCC_T30K_GPIO_Port GPIOE
-#define VCC_T20K_Pin GPIO_PIN_10
-#define VCC_T20K_GPIO_Port GPIOB
-#define VCC_T10K_Pin GPIO_PIN_11
-#define VCC_T10K_GPIO_Port GPIOB
+#define AMPCTRL_Pin GPIO_PIN_0
+#define AMPCTRL_GPIO_Port GPIOG
 #define ERROR_Pin GPIO_PIN_12
 #define ERROR_GPIO_Port GPIOB
 #define LOCAL_Pin GPIO_PIN_13
 #define LOCAL_GPIO_Port GPIOB
-#define VCC_CAPAMP3_Pin GPIO_PIN_8
-#define VCC_CAPAMP3_GPIO_Port GPIOD
 #define DATA_Pin GPIO_PIN_12
 #define DATA_GPIO_Port GPIOD
-#define VCC_CAPAMP0_Pin GPIO_PIN_3
-#define VCC_CAPAMP0_GPIO_Port GPIOD
-#define VCC_CAPAMP1_Pin GPIO_PIN_4
-#define VCC_CAPAMP1_GPIO_Port GPIOD
-#define VCC_PA8_CTRL_Pin GPIO_PIN_6
-#define VCC_PA8_CTRL_GPIO_Port GPIOD
-#define VCC_CAPAMP2_Pin GPIO_PIN_7
-#define VCC_CAPAMP2_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 /* Define one bit mask */

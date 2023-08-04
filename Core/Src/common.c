@@ -6,22 +6,6 @@ uint32_t g_terminalClass  = CLASS_POWER_OFF_DEV;
 float g_vccValue = 0.0;
 uint8_t clkStableFlag = 0;
 
-void init_vcc_terminal_R(uint8_t RV)
-{
-    if(RV == 50)
-		{
-		    HAL_GPIO_WritePin(VCC_T50K_GPIO_Port, VCC_T50K_Pin, GPIO_PIN_SET);
-		} else if (RV == 30) {
-		    HAL_GPIO_WritePin(VCC_T30K_GPIO_Port, VCC_T30K_Pin, GPIO_PIN_SET);
-		} else if (RV == 20) {
-        HAL_GPIO_WritePin(VCC_T20K_GPIO_Port, VCC_T20K_Pin, GPIO_PIN_SET);		
-		} else{
-        HAL_GPIO_WritePin(VCC_T10K_GPIO_Port, VCC_T10K_Pin, GPIO_PIN_SET);		
-		}
-		
-     return;
-}
-
 int clockIsStable(void)
 {
     return clkStableFlag;
@@ -151,6 +135,7 @@ char VppLevel(float x)  /*programing vpp/C6, see <ts_102221v15 chap 5.1.3>*/
 			  return 'H';
     return 'E';		
 }
+
 
 
 char isHighZ(float curVcc_v,  float x)

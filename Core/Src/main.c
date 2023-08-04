@@ -56,7 +56,7 @@ RTC_TimeTypeDef stimestructure;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint16_t ADC_value[ADC_CHANNEL_CNT] = { 0 };
+uint16_t ADC_value[ADC_CHANNEL_CNT*SAMPLING_COUNT] = { 0 };
 uint16_t lastVccData;
 uint16_t lastClkData;
 uint16_t lastIOData;
@@ -119,10 +119,10 @@ uint32_t ADC_MultiChannelPolling(uint8_t *packet)
     uint32_t uSampleOneClk = 0;
     uint32_t uCurrentClk = 0;
 
-    float curVcc_v = 0.0;
-    float curClk_v = 0.0;
-    float curIo_v  = 0.0;
-    float curRst_v = 0.0;
+    int curVcc_v = 0;
+    char curClk_v = 'L';
+    char curIo_v  = 'L';
+    char curRst_v = 'L';
 
     packet[2] = 0x81; /* 报文类型 */
     packet[3] = 0x01; /* 报文类型 */
@@ -131,55 +131,55 @@ uint32_t ADC_MultiChannelPolling(uint8_t *packet)
     uSampleOneClk =  (g_uEndSampleClkCnt - g_uStartSampleClkCnt)/32;
     nextCourseAmpMeasure++;
 
-    for (index = 0; index < SAMPLING_COUNT; index++) {
+    for (index = 0; index < (SAMPLING_COUNT/4); index++) {
         memset(&data, 0, sizeof(SAMPLING_DATA));
         bitLen = 0;
         uCurrentClk = g_uStartSampleClkCnt + uSampleOneClk * index;
         data.Clock = stm32_htonl(uCurrentClk);
         data.Pin = BIT7; /* 电压 */
-        if (ADC_value[0] != lastVccData)
+        if (ADC_value[index*4] != lastVccData)
         {
             data.Pin = data.Pin | BIT2;
-            data.Data0 = ADC_value[0];
-            lastVccData = ADC_value[0];
+            data.Data0 = ADC_value[index*4];
+            lastVccData = ADC_value[index*4];
             bitLen += 12;
         }
 
-        if (ADC_value[3] != lastRstData)
+        if (ADC_value[index*4+3] != lastRstData)
         {
             data.Pin = data.Pin | BIT1;
             if (bitLen == 12) { /* 数据中包含时钟�?�和电压�? */
-                data.Data1 = ADC_value[3];
+                data.Data1 = ADC_value[index*4+3];
             } else if (bitLen == 0){ /* 数据中包含时钟�?�或电压�? */
-                data.Data0 = ADC_value[3];
+                data.Data0 = ADC_value[index*4+3];
             } else {
                 //print error
             }
             bitLen += 12;
-            lastRstData = ADC_value[3];
+            lastRstData = ADC_value[index*4+3];
         }
 
-        if (ADC_value[2] != lastIOData)
+        if (ADC_value[index*4+2] != lastIOData)
         {
             data.Pin = data.Pin | BIT0;
             if (bitLen == 24){ /* 数据中包含时钟�?��?�电压�?�和IO�? */
-                data.Data2 = ADC_value[2];
+                data.Data2 = ADC_value[index*4+2];
             } else if (bitLen == 12) {
-                data.Data1 =  ADC_value[2];
+                data.Data1 =  ADC_value[index*4+2];
             } else if(bitLen == 0) {
-                data.Data0 = ADC_value[2];
+                data.Data0 = ADC_value[index*4+2];
             } else {
                 //error
             }
             bitLen += 12;
-            lastIOData = ADC_value[2];
+            lastIOData = ADC_value[index*4+2];
         }
         if (LauchTestCaseFlag == 1)
         {
-            curVcc_v = curTeVccState(VOL(ADC_value[0]));  /*vcc*/
-            curClk_v = ClkLevel(VOL(ADC_value[1]));       /*clk*/
-            curIo_v  = IoLevel(VOL(ADC_value[2]));        /*io*/
-            curRst_v = TeRstLevel(VOL(ADC_value[3]));     /*rst*/
+            curVcc_v = curTeVccState(VOL(ADC_value[index*4]));  /*vcc*/
+            curClk_v = ClkLevel(VOL(ADC_value[index*4+1]));       /*clk*/
+            curIo_v  = IoLevel(VOL(ADC_value[index*4+2]));        /*io*/
+            curRst_v = TeRstLevel(VOL(ADC_value[index*4+3]));     /*rst*/
             //curVccAmp = vcc_amp_count(ADC_value[4], ADC_value[5]);
 
             switch(g_caseNumber){
@@ -242,17 +242,10 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
   USB_Status_Init();
-	MX_USB_DEVICE_Init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-#if 0
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC1_Init();
-  MX_TIM4_Init();
-  MX_RTC_Init();
-#endif
+
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -264,26 +257,26 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     switch(workState){
-			  case IDLE_STATE:
-					if (StartSamplingFlag == 1) {
-					    workState = INIT_STATE;
-					}
-					HAL_Delay(500);
-					break;
-					
         case INIT_STATE:
             /* Initialize all configured peripherals */
             MX_GPIO_Init();
             MX_DMA_Init();
             MX_ADC1_Init();
             MX_TIM4_Init();
-            MX_RTC_Init();	
-				    init_vcc_terminal_R(50);
-				
-				    startup_info_report();
-            workState = SAMPLE_STATE;
+            MX_USB_DEVICE_Init();
+            MX_RTC_Init();
+
+            workState = IDLE_STATE;
+				    HAL_Delay(500);
             break;
-				
+        case IDLE_STATE:
+            if (StartSamplingFlag == 1) {
+							  startup_info_report();
+                workState = SAMPLE_STATE;
+            }
+            else
+                HAL_Delay(100);
+            break;
         case SAMPLE_STATE:
             if ((sampleInit == 0) && (StartSamplingFlag == 1)){
                 HAL_ADCEx_Calibration_Start(&hadc1);

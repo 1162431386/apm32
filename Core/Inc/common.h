@@ -142,17 +142,15 @@ extern char VppLevel(float x);
 extern char isHighZ(float curVcc_v,  float x);
 extern char isStateA(float curVcc_v, float x);
 
-extern void init_vcc_terminal_R(uint8_t RV);
-
-extern void te_init_pwr_seq(uint8_t *TePwrSeqState, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
+extern void te_init_pwr_seq(uint8_t *TePwrSeqState, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
 /*3v3 terminal start course*/
-extern void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
+extern void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
 /*1v8 terminal start course*/
-extern void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
+extern void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
 /*stage 2 5v power seq*/
-extern void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
+extern void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
 /*stage 2 3v3 power seq*/
-extern void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
+extern void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
 
 extern float vcc_amp_get(void);
 extern void get_duty_cycle(uint32_t uiDutyCycle, uint32_t uiCycle, uint8_t *HRadio, uint8_t *LRadio);
@@ -163,9 +161,9 @@ extern void startup_info_report(void);
 extern void sys_exception_info_report(char *errInfo);
 
 extern uint8_t g_pwrDownState;
-extern void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
-extern void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
-extern void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
-extern void te_2nd_5v_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v);
+extern void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
+extern void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
+extern void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
+extern void te_2nd_5v_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v);
 
 #endif

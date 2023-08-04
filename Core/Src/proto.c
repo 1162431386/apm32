@@ -112,7 +112,7 @@ void sys_exception_info_report(char *errInfo)
      return;
 }
 
-void te_init_pwr_seq(uint8_t *TePwrSeqState, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_init_pwr_seq(uint8_t *TePwrSeqState, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch(*TePwrSeqState){
     case INIT:
@@ -144,7 +144,7 @@ void te_init_pwr_seq(uint8_t *TePwrSeqState, float curVcc_v, float curClk_v, flo
 }               
 
 /*3v3 terminal start course*/   
-void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch(*TePwrSeqState){
         case VCC_3V3_STABLE:
@@ -195,8 +195,9 @@ void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, f
 }
 
 /*1v8 terminal start course*/   
-void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
+	  clkStableFlag = clockIsStable();
     switch(*TePwrSeqState){
         case VCC_1V8_STABLE:
             if (clkStableFlag == 1) {
@@ -246,7 +247,7 @@ void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, f
 }
 
 /*stage 2 5v power seq*/
-void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch(*TePwrSeqState){
         case VCC_SWTICH_TO_5V:
@@ -291,7 +292,7 @@ void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v
 }
 
 /*stage 2 3v3 power seq*/
-void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch (*TePwrSeqState) {
         case VCC_SWTICH_TO_3V3:
@@ -336,7 +337,7 @@ void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_
 }
 
 uint8_t g_pwrDownState = START;
-void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch(*TePwrSeqState) {
         case START:
@@ -360,7 +361,7 @@ void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc
     return;
 }
 
-void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch (*TePwrSeqState){
         case START:
@@ -384,7 +385,7 @@ void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc
     return;
 }
 
-void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch (*TePwrSeqState) {
         case VCC_2nd_3V3_START:
@@ -411,7 +412,7 @@ void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float cu
     return;
 }
 
-void te_2nd_5v_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+void te_2nd_5v_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
 {
     switch(*TePwrSeqState){
         case VCC_2nd_5V_START:
