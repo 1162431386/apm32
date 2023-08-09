@@ -57,6 +57,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define CLK_CNT_EN_Pin GPIO_PIN_11
+#define CLK_CNT_EN_GPIO_Port GPIOF
 #define AMPCTRL_Pin GPIO_PIN_0
 #define AMPCTRL_GPIO_Port GPIOG
 #define ERROR_Pin GPIO_PIN_12

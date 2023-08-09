@@ -57,19 +57,25 @@ void endTestCase_1(void)
 {
     CASE_FINAL_RESULT_PKT_T resultPkt = {0};
 
-    if((TePwrSeqState == PWR_FAIL) || (TePwrSeqState != VCC_5V_NORMAL_STATE))
+    if(TePwrSeqState != VCC_5V_NORMAL_STATE)
+		{
         resultPkt.resultCode = stm32_htons(0x8000);
+			  HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
+		}
     else
+		{
         resultPkt.resultCode = stm32_htons(0x0000);
+		}
 
     resultPkt.pktLen = stm32_htons(sizeof(CASE_FINAL_RESULT_PKT_T));
     resultPkt.pktType = stm32_htons(0x8203);
     resultPkt.caseNum = stm32_htons(1);
 
-    CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
     if(resultPkt.resultCode != 0)
         sprintf((char *)resultPkt.resultDesc, "terminal power on sequence current state[%d], pre-state[%d]", TePwrSeqState, TePreErrState);
 
+		CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
+		
     return;
 }
 
@@ -84,19 +90,25 @@ void endTestCase_2()
 {
    CASE_FINAL_RESULT_PKT_T resultPkt = {0};
 
-    if((TePwrSeqState == PWR_FAIL) || (TePwrSeqState != VCC_3V3_NORMAL_STATE))
+    if(TePwrSeqState != VCC_3V3_NORMAL_STATE)
+		{
         resultPkt.resultCode = stm32_htons(0x8000);
+			  HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
+		}
     else
+		{
         resultPkt.resultCode = stm32_htons(0x0000);
+		}
 
     resultPkt.pktLen = stm32_htons(sizeof(CASE_FINAL_RESULT_PKT_T));
     resultPkt.pktType = stm32_htons(0x8203);
     resultPkt.caseNum = stm32_htons(3);
 
-    CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
     if(resultPkt.resultCode != 0)
         sprintf((char *)resultPkt.resultDesc, "terminal power on sequence current state[%d], pre-state[%d]", TePwrSeqState, TePreErrState);
 
+		CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
+		
     return;
 }
 
@@ -112,18 +124,24 @@ void endTestCase_3()
     CASE_FINAL_RESULT_PKT_T resultPkt = {0};
 
     if(g_pwrDownState != VCC_2nd_5V_PWR_OFF_STABLE)
+		{
         resultPkt.resultCode = stm32_htons(0x8000);
+			  HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
+		}
     else
+		{
         resultPkt.resultCode = stm32_htons(0x0000);
+		}
 
     resultPkt.pktLen = stm32_htons(sizeof(CASE_FINAL_RESULT_PKT_T));
     resultPkt.pktType = stm32_htons(0x8203);
     resultPkt.caseNum = stm32_htons(3);
 
-    CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
     if(resultPkt.resultCode != 0)
-        sprintf((char *)resultPkt.resultDesc, "power off state[%d], pre-state[%d]", TePwrSeqState, TePreErrState);
+        sprintf((char *)resultPkt.resultDesc, "terminal power off state[%d], pre-state[%d]", TePwrSeqState, TePreErrState);
 
+		CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
+		
     return;
 }
 
@@ -139,17 +157,23 @@ void endTestCase_4()
    CASE_FINAL_RESULT_PKT_T resultPkt = {0};
 
     if((g_pwrDownState != VCC_2nd_3V3_PWR_OFF_STABLE))
+		{
         resultPkt.resultCode = stm32_htons(0x8000);
+			  HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
+		}
     else
+		{
         resultPkt.resultCode = stm32_htons(0x0000);
+		}
 
     resultPkt.pktLen = stm32_htons(sizeof(CASE_FINAL_RESULT_PKT_T));
     resultPkt.pktType = stm32_htons(0x8203);
     resultPkt.caseNum = stm32_htons(4);
 
-    CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
     if(resultPkt.resultCode != 0)
-        sprintf((char *)resultPkt.resultDesc, "power off state[%d]", g_pwrDownState);
-
+        sprintf((char *)resultPkt.resultDesc, "terminal  power off state[%d]", g_pwrDownState);
+		
+		CDC_Transmit_FS((uint8_t *)&resultPkt, resultPkt.pktLen);
+		
     return;
 }

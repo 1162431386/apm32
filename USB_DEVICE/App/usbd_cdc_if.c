@@ -343,7 +343,15 @@ void DevReset(uint8_t *inBuf)
 {
     //CDC_Transmit_FS((uint8_t *)"DevReset\r\n", 10);
     //CDC_Transmit_FS((uint8_t *)USB_COM.RecBuf, (uint16_t)USB_COM.RecLen);
-	  HAL_NVIC_SystemReset();
+	//HAL_NVIC_SystemReset();
+	char errInfo[256] = {0};
+	SYS_EXCEPTION_INFO_T errInfoPkt = {0};
+	errInfoPkt.pktLen = stm32_htons(sizeof(SYS_START_UP_INFO_T));
+	errInfoPkt.pktType = stm32_htons(0x8001);
+	errInfoPkt.errInfoLen = stm32_htons(6);
+	errInfoPkt.version = stm32_htons(0x10);
+	strcpy(errInfoPkt.errInfo, errInfo);
+	CDC_Transmit_FS((uint8_t *)&errInfoPkt, errInfoPkt.pktLen);
 }
 
 void ProSetting(uint8_t *inBuf)
@@ -406,10 +414,10 @@ void USB_DataHandler(void)
     uint16_t dataLength = 0;
     uint16_t dataType = 0;
 
-	  //dataLength = (USB_COM.RecBuf[1] << 8) | USB_COM.RecBuf[0];
+    //dataLength = (USB_COM.RecBuf[1] << 8) | USB_COM.RecBuf[0];
     dataLength = stm32_ntohs(*(uint16_t *)&USB_COM.RecBuf[0]);
-	  //dataType = (USB_COM.RecBuf[3] << 8) | USB_COM.RecBuf[2];
-	  dataType = stm32_ntohs(*(uint16_t *)&USB_COM.RecBuf[2]);
+    //dataType = (USB_COM.RecBuf[3] << 8) | USB_COM.RecBuf[2];
+    dataType = stm32_ntohs(*(uint16_t *)&USB_COM.RecBuf[2]);
 //    usb_printf("dataLength  = 0x%x, dataType =  0x%x\r\n", dataLength, dataType);
     for (i = 0; i < sizeof (commands) / sizeof (USER_MSG_CMD_T); i++)
     {

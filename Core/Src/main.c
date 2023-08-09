@@ -78,6 +78,10 @@ float curVccAmp = 0.0;
 
 uint8_t sampleInit = 0;
 
+uint32_t IC_TIMES;  // 捕获次数，单位1ms
+uint8_t IC_START_FLAG;  // 捕获开始标志，1：已捕获到高电平；0：还没有捕获到高电平
+uint8_t IC_DONE_FLAG;  // 捕获完成标志，1：已完成一次高电平捕获
+uint16_t IC_VALUE;  // 输入捕获的捕获值
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,23 +94,48 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void USB_Status_Init(void);
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+/* 定时器计数溢出中断处理回调函数 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if((htim->Instance == htim4.Instance) && (clkStableFlag != 1))
+    if(IC_DONE_FLAG == 0)  // 未完成捕获
     {
-        switch(htim->Channel)
+        if(IC_START_FLAG == 1)  // 已经捕获到了高电平
         {
-            case HAL_TIM_ACTIVE_CHANNEL_1:
-                uiDutyCycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); /* 占空�? */
-                break;
-            case HAL_TIM_ACTIVE_CHANNEL_2:
-                uiCycle = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);     /* 周期 */
-                clkStableFlag = 1;
-                break;
-            default:
-                break;
+            IC_TIMES++;  // 捕获次数加一
         }
     }
+}
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if(IC_DONE_FLAG == 0)  // 未完成捕获
+    {
+        if(IC_START_FLAG == 1)  // 原来是高电平，现在捕获到一个下降沿
+        {
+            IC_VALUE = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // 获取捕获值
+            TIM_RESET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1);  // 先清除原来的设置
+            TIM_SET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1,TIM_ICPOLARITY_RISING);// 配置为上升沿捕获
+            IC_START_FLAG = 0;  // 标志复位
+            IC_DONE_FLAG = 1;  // 完成一次高电平捕获
+        }
+        else  // 捕获还未开始，第一次捕获到上升沿
+        {
+            IC_TIMES = 0;  // 捕获次数清零
+            IC_VALUE = 0;  // 捕获值清零
+            IC_START_FLAG = 1;  // 设置捕获到了上边沿的标志
+            TIM_RESET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1);  // 先清除原来的设置
+            TIM_SET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1,TIM_ICPOLARITY_FALLING);// 配置为下降沿捕获
+        }
+        __HAL_TIM_SET_COUNTER(htim,0);  // 定时器计数值清零
+    }
+#if 0
+    if (htim->Instance == htim4.Instance)
+    {
+        g_uClockCnt++;
+        HAL_TIM_ReadCapturedValue(&htim4,TIM_CHANNEL_1);
+        clkStableFlag = 1;
+    }
+#endif
 }
 
 uint32_t ADC_MultiChannelPolling(uint8_t *packet)
@@ -119,19 +148,25 @@ uint32_t ADC_MultiChannelPolling(uint8_t *packet)
     uint32_t uSampleOneClk = 0;
     uint32_t uCurrentClk = 0;
 
-    int curVcc_v = 0;
-    char curClk_v = 'L';
-    char curIo_v  = 'L';
-    char curRst_v = 'L';
+    float curVcc_v = 0.0;
+    float curClk_v = 0.0;
+    float curIo_v  = 0.0;
+    float curRst_v = 0.0;
 
     packet[2] = 0x81; /* 报文类型 */
     packet[3] = 0x01; /* 报文类型 */
     *(uint32_t *)(packet+4) = stm32_htonl(HAL_GetTick());
     
-    uSampleOneClk =  (g_uEndSampleClkCnt - g_uStartSampleClkCnt)/32;
-    nextCourseAmpMeasure++;
+    if(clkStableFlag == 0){
+       g_uStartSampleClkCnt = 0;
+       g_uEndSampleClkCnt =  0; 
+    }
+      
+    g_uStartSampleClkCnt = g_uClockCnt;
+    uSampleOneClk =  (g_uStartSampleClkCnt - g_uEndSampleClkCnt)/32;
+    g_uEndSampleClkCnt = g_uStartSampleClkCnt;
 
-    for (index = 0; index < (SAMPLING_COUNT/4); index++) {
+    for (index = 0; index < SAMPLING_COUNT; index++) {
         memset(&data, 0, sizeof(SAMPLING_DATA));
         bitLen = 0;
         uCurrentClk = g_uStartSampleClkCnt + uSampleOneClk * index;
@@ -174,13 +209,28 @@ uint32_t ADC_MultiChannelPolling(uint8_t *packet)
             bitLen += 12;
             lastIOData = ADC_value[index*4+2];
         }
+
+        usb_printf("[%u] %d %f %f %f %f %f\r\n",
+				    uCurrentClk,
+				    index,
+            VOL(ADC_value[index*4]),     /*vcc*/
+            VOL(ADC_value[index*4+1]),   /*clk*/
+				    VOL(ADC_value[index*4+2]),   /*io*/
+				    VOL(ADC_value[index*4+3]),   /*rst*/
+				    (VOL(ADC_value[index*4+2])/3300)*1000000); /*io amp*/
+        
         if (LauchTestCaseFlag == 1)
         {
-            curVcc_v = curTeVccState(VOL(ADC_value[index*4]));  /*vcc*/
-            curClk_v = ClkLevel(VOL(ADC_value[index*4+1]));       /*clk*/
-            curIo_v  = IoLevel(VOL(ADC_value[index*4+2]));        /*io*/
-            curRst_v = TeRstLevel(VOL(ADC_value[index*4+3]));     /*rst*/
+            curVcc_v = VOL(ADC_value[index*4]);         /*vcc*/
+            curClk_v = VOL(ADC_value[index*4+1]);       /*clk*/
+            curIo_v  = VOL(ADC_value[index*4+2]);       /*io*/
+            curRst_v = VOL(ADC_value[index*4+3]);       /*rst*/
             //curVccAmp = vcc_amp_count(ADC_value[4], ADC_value[5]);
+            if (ClkLevel(curClk_v) == 'H'){
+                HAL_GPIO_WritePin(DATA_GPIO_Port, DATA_Pin, GPIO_PIN_SET);
+            }else
+                HAL_GPIO_WritePin(DATA_GPIO_Port, DATA_Pin, GPIO_PIN_RESET);
+                    
 
             switch(g_caseNumber){
                 case 1:
@@ -226,6 +276,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
   uint32_t sendLen = 0;
   uint8_t sampleInit = 0;
+    uint32_t time = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -256,6 +307,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    if(IC_DONE_FLAG == 1)  // 如果完成一次高电平捕获
+    {
+        IC_DONE_FLAG = 0;  // 标志清零
+        time = IC_TIMES * 1000;  // 脉冲时间为捕获次数 * 1000us
+        time += IC_VALUE;  // 加上捕获时间（小于1ms的部分）
+        printf("High level: %d us\n", time);
+    }
+
     switch(workState){
         case INIT_STATE:
             /* Initialize all configured peripherals */
@@ -265,13 +324,16 @@ int main(void)
             MX_TIM4_Init();
             MX_USB_DEVICE_Init();
             MX_RTC_Init();
+            TePwrSeqState = INIT;
+            TePreErrState = INIT;
+				    HAL_GPIO_WritePin(CLK_CNT_EN_GPIO_Port, CLK_CNT_EN_Pin, GPIO_PIN_RESET);
 
             workState = IDLE_STATE;
 				    HAL_Delay(500);
             break;
         case IDLE_STATE:
             if (StartSamplingFlag == 1) {
-							  startup_info_report();
+								startup_info_report();
                 workState = SAMPLE_STATE;
             }
             else
@@ -280,7 +342,7 @@ int main(void)
         case SAMPLE_STATE:
             if ((sampleInit == 0) && (StartSamplingFlag == 1)){
                 HAL_ADCEx_Calibration_Start(&hadc1);
-                HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&ADC_value, ADC_CHANNEL_CNT);
+                HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&ADC_value, ADC_CHANNEL_CNT * SAMPLING_COUNT);
                 HAL_GPIO_WritePin(GPIOB, LOCAL_Pin, GPIO_PIN_SET);
                 sampleInit = 1;
             }
@@ -291,7 +353,7 @@ int main(void)
                 if ((HAL_GetTick()%1000)==0)
                     HAL_GPIO_TogglePin(DATA_GPIO_Port, DATA_Pin);
 
-                CDC_Transmit_FS(sendBuf, sendLen);
+                //CDC_Transmit_FS(sendBuf, sendLen);
             }
             if(LauchTestCaseFlag == 1) {
                 g_caseState = execTestCase(g_caseNumber, sendBuf);

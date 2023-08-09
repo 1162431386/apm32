@@ -45,6 +45,7 @@
 extern uint32_t g_uClockCnt;
 extern uint32_t g_uEndSampleClkCnt;
 extern uint32_t g_uStartSampleClkCnt;
+extern uint8_t  clkStableFlag;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -228,8 +229,11 @@ void DMA1_Channel1_IRQHandler(void)
   /* USER CODE END DMA1_Channel1_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc1);
   /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
-  g_uStartSampleClkCnt = g_uEndSampleClkCnt;
-  g_uEndSampleClkCnt =  g_uClockCnt;
+  if (clkStableFlag == 1) {
+    g_uEndSampleClkCnt =  g_uStartSampleClkCnt;
+    g_uStartSampleClkCnt = g_uClockCnt;  
+  }
+   
   /* USER CODE END DMA1_Channel1_IRQn 1 */
 }
 
@@ -258,6 +262,7 @@ void TIM4_IRQHandler(void)
   HAL_TIM_IRQHandler(&htim4);
   /* USER CODE BEGIN TIM4_IRQn 1 */
   g_uClockCnt++;
+  clkStableFlag = 1;
   /* USER CODE END TIM4_IRQn 1 */
 }
 

@@ -9,14 +9,6 @@
 uint8_t TePwrSeqState = INIT;
 uint8_t TePreErrState = INIT;
 
-uint8_t TeInitErrState = INIT;
-
-uint8_t TE3V3Stage1EndState = INIT;
-uint8_t TE3V3Stage2EndState = INIT;
-
-uint8_t TE1V8Stage1EndState = INIT;
-uint8_t TE1V8Stage2EndState = INIT;
-
 uint8_t nextCourseAmpMeasure = 0;
 uint8_t pre_nextCourseAmpMeasure = 0;
 
@@ -112,246 +104,214 @@ void sys_exception_info_report(char *errInfo)
      return;
 }
 
-void te_init_pwr_seq(uint8_t *TePwrSeqState, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_init_pwr_seq(uint8_t *TePwrSeqState, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
-    switch(*TePwrSeqState){
-    case INIT:
-        if((curVcc_v == CLASS_POWER_OFF_DEV) && (curClk_v == 'L') &&
-            (curIo_v == 'L') && (curRst_v == 'L'))
-            *TePwrSeqState = PWR_OFF;
-        else{
-            TePreErrState = INIT;
-            *TePwrSeqState = PWR_FAIL;
-            TeInitErrState = PWR_FAIL;
-        }
-        break;
-    case PWR_OFF:
-        if ((curVcc_v == CLASS_B_3V3_DEV) || (curVcc_v == CLASS_C_1V8_DEV))
-            /*start clk check timer*/
-            HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);  /* 使能定时�??1的PWM输入捕获 */
-            HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);  /* 使能定时�??2的PWM输入捕获 */
-            g_uStartSampleClkCnt = g_uClockCnt;
-            g_uEndSampleClkCnt =  g_uClockCnt;
-            if(curVcc_v == CLASS_B_3V3_DEV)
-                *TePwrSeqState = VCC_3V3_STABLE;
-            if(curVcc_v == CLASS_C_1V8_DEV)
-                *TePwrSeqState = VCC_1V8_STABLE;
-        break;
-    default:
-        HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
-        break;
-    }
-}               
-
-/*3v3 terminal start course*/   
-void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
-{
-    switch(*TePwrSeqState){
-        case VCC_3V3_STABLE:
-            if (clkStableFlag == 1) {
-                send_clock_sample_frame();
-                *TePwrSeqState = VCC_3V3_CLK_STABLE;
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_SET);
-                pre_nextCourseAmpMeasure = nextCourseAmpMeasure;
+    switch(*TePwrSeqState) {
+        case INIT:
+            if ((curTeVccState(curVcc_v) == CLASS_POWER_OFF_DEV) && (ClkLevel(curClk_v) == 'L') &&
+                (IoLevel(curIo_v) == 'L') && (TeRstLevel(curRst_v) == 'L'))
+                *TePwrSeqState = PWR_OFF;
+            else {
+                TePreErrState = INIT;
+                *TePwrSeqState = PWR_FAIL;
             }
             break;
-        case VCC_3V3_CLK_STABLE:
-            if (nextCourseAmpMeasure > pre_nextCourseAmpMeasure) {
-                if (isHighZ(curVcc_v, curIo_v) == 'Z') {
-                    break;
-                }
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_RESET);
-                if (curClock >= 200) {
-                    *TePwrSeqState = VCC_3V3_IO_STABLE;
-                } else {
-                    TePreErrState = VCC_3V3_CLK_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                    TE3V3Stage1EndState = VCC_3V3_NORMAL_STATE;
-                }
-            }
-            break;
-        case VCC_3V3_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'H') {
-                if (curClock >= 400) {
-                    *TePwrSeqState = VCC_3V3_NORMAL_STATE;
-                } else {
-                    TePreErrState = VCC_3V3_IO_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                    TE3V3Stage1EndState = VCC_3V3_NORMAL_STATE;
-                }
-            }
-            break;
-        case VCC_3V3_NORMAL_STATE:
-            if(curVcc_v == CLASS_A_5V_DEV){
-                *TePwrSeqState = VCC_SWTICH_TO_5V;
-                TE3V3Stage1EndState = VCC_3V3_NORMAL_STATE;
-                clkStableFlag = 0;
+        case PWR_OFF:
+            if ((curTeVccState(curVcc_v) == CLASS_B_3V3_DEV) || (curTeVccState(curVcc_v) == CLASS_C_1V8_DEV))
+            {    /*start clk check timer*/
+                HAL_GPIO_WritePin(CLK_CNT_EN_GPIO_Port, CLK_CNT_EN_Pin, GPIO_PIN_SET);
+                HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);  /* 使能定时�??1的PWM输入捕获 */
+                __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
+                if (curTeVccState(curVcc_v) == CLASS_B_3V3_DEV)
+                    *TePwrSeqState = VCC_3V3_STABLE;
+                if (curTeVccState(curVcc_v) == CLASS_C_1V8_DEV)
+                    *TePwrSeqState = VCC_1V8_STABLE;
             }
             break;
         default:
-            HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
+            break;
+    }
+}               
+uint32_t g_pro_clk_cnt = 0;
+/*3v3 terminal start course*/   
+void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
+{
+   switch(*TePwrSeqState){
+        case VCC_3V3_STABLE:
+            if (clkStableFlag == 1) {
+                g_pro_clk_cnt = g_uClockCnt;
+                send_clock_sample_frame();
+                *TePwrSeqState = VCC_3V3_CLK_STABLE;
+            }
+            break;
+        case VCC_3V3_CLK_STABLE:
+            if (isHighZ(curVcc_v, curIo_v) == 'Z'){
+                break;
+            }
+
+            if ((g_uClockCnt - g_pro_clk_cnt)>= 200) {
+                *TePwrSeqState = VCC_3V3_IO_STABLE;
+            } else {
+                TePreErrState = VCC_3V3_CLK_STABLE;
+                *TePwrSeqState = PWR_FAIL;
+            }
+            break;
+        case VCC_3V3_IO_STABLE:
+            if (TeRstLevel(curRst_v) == 'L') {
+                break;
+            }
+
+            if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
+                *TePwrSeqState = VCC_3V3_NORMAL_STATE;
+            } else {
+                TePreErrState = VCC_3V3_IO_STABLE;
+                *TePwrSeqState = PWR_FAIL;
+            }
+
+            break;
+        case VCC_3V3_NORMAL_STATE:
+            *TePwrSeqState = VCC_SWTICH_TO_5V;
+            clkStableFlag = 0;
+            break;
+        default:
             break;
     }
 }
 
 /*1v8 terminal start course*/   
-void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
-	  clkStableFlag = clockIsStable();
     switch(*TePwrSeqState){
         case VCC_1V8_STABLE:
             if (clkStableFlag == 1) {
+                g_pro_clk_cnt = g_uClockCnt;
                 send_clock_sample_frame();  
                 *TePwrSeqState = VCC_1V8_CLK_STABLE;
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_SET);
-                pre_nextCourseAmpMeasure = nextCourseAmpMeasure;
             }
             break;
         case VCC_1V8_CLK_STABLE:
-            if(nextCourseAmpMeasure > pre_nextCourseAmpMeasure){
-                if(isHighZ(curVcc_v, curIo_v) == 'Z')
-                    break;
+            if (isHighZ(curVcc_v, curIo_v) == 'Z')
+                break;
 
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_RESET);
-                if(curClock >= 200) {
-                    *TePwrSeqState = VCC_1V8_IO_STABLE;
-                } else {
-                    TePreErrState = VCC_1V8_CLK_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                    TE1V8Stage1EndState = PWR_FAIL;
-                }
+            if ((g_uClockCnt - g_pro_clk_cnt) >= 200) {
+                *TePwrSeqState = VCC_1V8_IO_STABLE;
+            } else {
+                TePreErrState = VCC_1V8_CLK_STABLE;
+                *TePwrSeqState = PWR_FAIL;
             }
             break;
         case VCC_1V8_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'H') {
-                if(curClock >= 400) {
-                    *TePwrSeqState = VCC_1V8_NORMAL_STATE;
-                } else {
-                    TePreErrState = VCC_1V8_IO_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                    TE1V8Stage1EndState = PWR_FAIL;
-                } 
+            if (TeRstLevel(curRst_v) == 'L') {
+                break;
             }
-        break;
-    case VCC_1V8_NORMAL_STATE:
-        if(curVcc_v == CLASS_A_5V_DEV){
+
+            if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
+                *TePwrSeqState = VCC_1V8_NORMAL_STATE;
+            } else {
+                TePreErrState = VCC_1V8_IO_STABLE;
+                *TePwrSeqState = PWR_FAIL;
+            } 
+            break;
+        case VCC_1V8_NORMAL_STATE:
             *TePwrSeqState = VCC_SWTICH_TO_3V3;
-            TE1V8Stage1EndState = VCC_1V8_NORMAL_STATE;
             clkStableFlag = 0;
-        }
-        break;
-    default:
-        HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
-        break;
+            break;
+        default:
+            break;
     }
 }
 
 /*stage 2 5v power seq*/
-void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch(*TePwrSeqState){
         case VCC_SWTICH_TO_5V:
             if (clkStableFlag == 1) {
                 send_clock_sample_frame();
                 *TePwrSeqState = VCC_5V_CLK_STABLE;
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_SET);
-                pre_nextCourseAmpMeasure = nextCourseAmpMeasure;
             }
             break;
         case VCC_5V_CLK_STABLE:
-            if (nextCourseAmpMeasure > pre_nextCourseAmpMeasure) {
                 if(isHighZ(curVcc_v, curIo_v) == 'Z') {
                     break;
                 }
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_RESET);
                 if (curClock >= 200) {
                     *TePwrSeqState = VCC_5V_IO_STABLE;
                 } else {
                     TePreErrState = VCC_5V_CLK_STABLE;
                     *TePwrSeqState = PWR_FAIL;
                 }
-            }
             break;
         case VCC_5V_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'H') {
-                if (curClock >= 400) {
-                    *TePwrSeqState = VCC_5V_NORMAL_STATE;
-                } else {
-                    TePreErrState = VCC_5V_IO_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                }
+            if (TeRstLevel(curRst_v) == 'L') {
+                break;
+            }
+
+            if (curClock >= 400) {
+                *TePwrSeqState = VCC_5V_NORMAL_STATE;
+            } else {
+                TePreErrState = VCC_5V_IO_STABLE;
+                *TePwrSeqState = PWR_FAIL;
             }
             break;
-        case VCC_5V_NORMAL_STATE:
-            TE3V3Stage2EndState = VCC_5V_NORMAL_STATE;
-            break;
         default:
-            HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
             break;
     }
 }
 
 /*stage 2 3v3 power seq*/
-void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch (*TePwrSeqState) {
         case VCC_SWTICH_TO_3V3:
             if (clkStableFlag == 1) {
                 send_clock_sample_frame();
                 *TePwrSeqState = VCC_3V3_CLK_STABLE;
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_SET);
-                pre_nextCourseAmpMeasure = nextCourseAmpMeasure;
             }
             break;
         case VCC_2nd_3V3_CLK_STABLE:
-            if (nextCourseAmpMeasure > pre_nextCourseAmpMeasure){
-                if (isHighZ(curVcc_v, curIo_v) == 'Z') {
-                    break;
-                }
-                //HAL_GPIO_WritePin(AMPCTRL_GPIO_Port, AMPCTRL_Pin, GPIO_PIN_RESET);
-                if (curClock >= 200) {
-                    *TePwrSeqState = VCC_3V3_IO_STABLE;
-                } else {
-                    TePreErrState = VCC_2nd_3V3_CLK_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                }
+            if (isHighZ(curVcc_v, curIo_v) == 'Z') {
+                break;
+            }
+            if (curClock >= 200) {
+                *TePwrSeqState = VCC_3V3_IO_STABLE;
+            } else {
+            TePreErrState = VCC_2nd_3V3_CLK_STABLE;
+                *TePwrSeqState = PWR_FAIL;
             }
             break;
         case VCC_2nd_3V3_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'H') {
-                if (curClock >= 400) {
-                    *TePwrSeqState = VCC_3V3_NORMAL_STATE;
-                } else {
-                    TePreErrState = VCC_2nd_3V3_IO_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                }
+            if (TeRstLevel(curRst_v) == 'L') {
+                break;
+            }
+            if (curClock >= 400) {
+                *TePwrSeqState = VCC_3V3_NORMAL_STATE;
+            } else {
+                TePreErrState = VCC_2nd_3V3_IO_STABLE;
+                *TePwrSeqState = PWR_FAIL;
             }
             break;
-        case VCC_2nd_3V3_NORMAL_STATE:
-            TE1V8Stage2EndState = VCC_2nd_3V3_NORMAL_STATE;
-            break;
         default:
-            HAL_GPIO_WritePin(ERROR_GPIO_Port, ERROR_Pin, GPIO_PIN_SET);
             break;
     }
 }
 
 uint8_t g_pwrDownState = START;
-void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch(*TePwrSeqState) {
         case START:
-            if (curVcc_v == CLASS_B_3V3_DEV) {
+            if (curTeVccState(curVcc_v) == CLASS_B_3V3_DEV) {
                 *TePwrSeqState = VCC_3V3_PWR_PRE_NORMAL;
             }
             break;
         case VCC_3V3_PWR_PRE_NORMAL:
-            if (curVcc_v == CLASS_POWER_OFF_DEV) {
+            if (curTeVccState(curVcc_v) == CLASS_POWER_OFF_DEV) {
                 *TePwrSeqState = VCC_3V3_PWR_CUR_OFF;
             }
             break;
         case VCC_3V3_PWR_CUR_OFF:
-            if((curClk_v == 'L') && (curRst_v == 'L') && isStateA(curVcc_v, curIo_v) == 'A') {
+            if((ClkLevel(curClk_v) == 'L') && (TeRstLevel(curRst_v) == 'L') && (isStateA(curVcc_v, curIo_v) == 'A')) {
                 *TePwrSeqState = VCC_2nd_5V_START;
             }
             break;
@@ -361,21 +321,21 @@ void te_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v
     return;
 }
 
-void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch (*TePwrSeqState){
         case START:
-            if (curVcc_v == CLASS_C_1V8_DEV) {
+            if (curTeVccState(curVcc_v) == CLASS_C_1V8_DEV) {
                 *TePwrSeqState = VCC_1V8_PWR_PRE_NORMAL;
             }
             break;
         case VCC_1V8_PWR_PRE_NORMAL:
-            if (curVcc_v == CLASS_POWER_OFF_DEV) {
+            if (curTeVccState(curVcc_v) == CLASS_POWER_OFF_DEV) {
                 *TePwrSeqState = VCC_1V8_PWR_CUR_OFF;
             }
             break;
         case VCC_1V8_PWR_CUR_OFF:
-            if ((curClk_v == 'L') && (curRst_v == 'L') && isStateA(curVcc_v, curIo_v) == 'A') {
+            if ((ClkLevel(curClk_v) == 'L') && (TeRstLevel(curRst_v) == 'L') && (isStateA(curVcc_v, curIo_v) == 'A')) {
                 *TePwrSeqState = VCC_2nd_3V3_START;
             }
             break;
@@ -385,25 +345,23 @@ void te_1v8_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v
     return;
 }
 
-void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch (*TePwrSeqState) {
         case VCC_2nd_3V3_START:
-            if (curVcc_v == CLASS_B_3V3_DEV) {
+            if (curTeVccState(curVcc_v) == CLASS_B_3V3_DEV) {
                 *TePwrSeqState = VCC_2nd_3V3_PWR_PRE_NORMAL;
             }
             break;
         case VCC_2nd_3V3_PWR_PRE_NORMAL:
-            if (curVcc_v == CLASS_POWER_OFF_DEV) {
+            if (curTeVccState(curVcc_v) == CLASS_POWER_OFF_DEV) {
                 *TePwrSeqState = VCC_2nd_3V3_PWR_CUR_OFF;
             }
             break;
         case VCC_2nd_3V3_PWR_CUR_OFF:
-            if((curClk_v == 'L') && (curRst_v == 'L') && isStateA(curVcc_v, curIo_v) == 'A') {
+            if((ClkLevel(curClk_v) == 'L') && (TeRstLevel(curRst_v) == 'L') && (isStateA(curVcc_v, curIo_v) == 'A')) {
                 *TePwrSeqState = VCC_2nd_3V3_PWR_OFF_STABLE;
             }
-            break;
-        case VCC_2nd_3V3_PWR_OFF_STABLE:
             break;
         default:
             break;
@@ -412,22 +370,21 @@ void te_2nd_3v3_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curV
     return;
 }
 
-void te_2nd_5v_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, int curVcc_v, char curClk_v, char curIo_v, char curRst_v)
+void te_2nd_5v_pwr_down_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch(*TePwrSeqState){
         case VCC_2nd_5V_START:
-            if(curVcc_v == CLASS_A_5V_DEV)
+            if(curTeVccState(curVcc_v) == CLASS_A_5V_DEV)
                 *TePwrSeqState = VCC_2nd_5V_PWR_PRE_NORMAL;
             break;
         case VCC_2nd_5V_PWR_PRE_NORMAL:
-            if(curVcc_v == CLASS_POWER_OFF_DEV)
+            if(curTeVccState(curVcc_v) == CLASS_POWER_OFF_DEV)
                 *TePwrSeqState = VCC_2nd_5V_PWR_CUR_OFF;
             break;
         case VCC_2nd_5V_PWR_CUR_OFF:
-            if((curClk_v == 'L') && (curRst_v == 'L') && isStateA(curVcc_v, curIo_v) == 'A')
+            if ((ClkLevel(curClk_v) == 'L') && (TeRstLevel(curRst_v) == 'L') && (isStateA(curVcc_v, curIo_v) == 'A')) {
                 *TePwrSeqState = VCC_2nd_5V_PWR_OFF_STABLE;
-            break;
-        case VCC_2nd_5V_PWR_OFF_STABLE:
+            }
             break;
         default:
             break;

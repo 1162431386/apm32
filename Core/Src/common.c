@@ -141,11 +141,12 @@ char VppLevel(float x)  /*programing vpp/C6, see <ts_102221v15 chap 5.1.3>*/
 char isHighZ(float curVcc_v,  float x)
 {
 	  float Amp = (VOL(x)/3300)*1000000;
+
 	  if(TePwrState() == CLASS_A_5V_DEV){
-			if(((VOL(x) > 3.8 * 0.7 * curVcc_v) && (VOL(x) < (curVcc_v + 0.3))) && (Amp < 20))
+			if(((VOL(x) > 0.7 * curVcc_v) && (VOL(x) < (curVcc_v + 0.3))) && (Amp == 20))
 				return 'Z';
 		}else if((TePwrState() == CLASS_B_3V3_DEV) || (TePwrState() == CLASS_C_1V8_DEV)){
-			if(((VOL(x) > 0.7 * curVcc_v) && (VOL(x) < (curVcc_v + 0.3))) && (Amp < 20))
+			if(((VOL(x) > 0.7 * curVcc_v) && (VOL(x) < (curVcc_v + 0.3))) && (Amp == 20))
 				return 'Z';
 		}
 
