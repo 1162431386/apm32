@@ -11,7 +11,7 @@
 #define CLASS_C_1V8_DEV             3    /*1.8v terminal*/
 #define CLASS_POWER_INVAILD_DEV     4
 
-#define VOL(x) (((x) * 3.3000 / 4095.0) * 3.300 / 1.7000)
+#define VOL(x) (((x) * 3.3000 / 4095.0) * ((1.70+3.30) / 3.30))
 
 #define stm32_htons(A)  ((((uint16_t)(A) & 0xff00) >> 8) | \
                          (((uint16_t)(A) & 0x00ff) << 8))

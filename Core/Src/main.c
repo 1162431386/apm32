@@ -78,10 +78,10 @@ float curVccAmp = 0.0;
 
 uint8_t sampleInit = 0;
 
-uint32_t IC_TIMES;  // 捕获次数，单位1ms
-uint8_t IC_START_FLAG;  // 捕获开始标志，1：已捕获到高电平；0：还没有捕获到高电平
-uint8_t IC_DONE_FLAG;  // 捕获完成标志，1：已完成一次高电平捕获
-uint16_t IC_VALUE;  // 输入捕获的捕获值
+uint32_t IC_TIMES;  // 捕获次数，单�?1ms
+uint8_t IC_START_FLAG;  // 捕获�?始标志，1：已捕获到高电平�?0：还没有捕获到高电平
+uint8_t IC_DONE_FLAG;  // 捕获完成标志�?1：已完成�?次高电平捕获
+uint16_t IC_VALUE;  // 输入捕获的捕获�??
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,12 +94,12 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 void USB_Status_Init(void);
-/* 定时器计数溢出中断处理回调函数 */
+/* 定时器计数溢出中断处理回调函�? */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if(IC_DONE_FLAG == 0)  // 未完成捕获
+    if(IC_DONE_FLAG == 0)  // 未完成捕�?
     {
-        if(IC_START_FLAG == 1)  // 已经捕获到了高电平
+        if(IC_START_FLAG == 1)  // 已经捕获到了高电�?
         {
             IC_TIMES++;  // 捕获次数加一
         }
@@ -108,25 +108,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-    if(IC_DONE_FLAG == 0)  // 未完成捕获
+    if(IC_DONE_FLAG == 0)  // 未完成捕�?
     {
-        if(IC_START_FLAG == 1)  // 原来是高电平，现在捕获到一个下降沿
+        if(IC_START_FLAG == 1)  // 原来是高电平，现在捕获到�?个下降沿
         {
-            IC_VALUE = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // 获取捕获值
+            IC_VALUE = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // 获取捕获�?
             TIM_RESET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1);  // 先清除原来的设置
             TIM_SET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1,TIM_ICPOLARITY_RISING);// 配置为上升沿捕获
             IC_START_FLAG = 0;  // 标志复位
-            IC_DONE_FLAG = 1;  // 完成一次高电平捕获
+            IC_DONE_FLAG = 1;  // 完成�?次高电平捕获
         }
-        else  // 捕获还未开始，第一次捕获到上升沿
+        else  // 捕获还未�?始，第一次捕获到上升�?
         {
             IC_TIMES = 0;  // 捕获次数清零
-            IC_VALUE = 0;  // 捕获值清零
+            IC_VALUE = 0;  // 捕获值清�?
             IC_START_FLAG = 1;  // 设置捕获到了上边沿的标志
             TIM_RESET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1);  // 先清除原来的设置
             TIM_SET_CAPTUREPOLARITY(htim,TIM_CHANNEL_1,TIM_ICPOLARITY_FALLING);// 配置为下降沿捕获
         }
-        __HAL_TIM_SET_COUNTER(htim,0);  // 定时器计数值清零
+        __HAL_TIM_SET_COUNTER(htim,0);  // 定时器计数�?�清�?
     }
 #if 0
     if (htim->Instance == htim4.Instance)
@@ -209,16 +209,22 @@ uint32_t ADC_MultiChannelPolling(uint8_t *packet)
             bitLen += 12;
             lastIOData = ADC_value[index*4+2];
         }
+#if 0
+        usb_printf("uCurrentClk = %u, curVcc_v = %f, curClk_v = %f, curIo_v = %f, Amp = %f, curRst_v = %f\r\n", 
+		uCurrentClk,
+            VOL(ADC_value[index*4]),
+            VOL(ADC_value[index*4+1]), VOL(ADC_value[index*4+2]), (VOL(ADC_value[index*4+2])/3300)*1000000, VOL(ADC_value[index*4+3]));
+#else
+usb_printf("[%u,%d] %f %f %f %f %f\r\n", 
+		        uCurrentClk,                //clk
+				    index,                      
+            VOL(ADC_value[index*4]),        //vcc
+            VOL(ADC_value[index*4+1]),      //clk
+				    VOL(ADC_value[index*4+2]),      //io
+				    VOL(ADC_value[index*4+3]),      //rst
+  			    (VOL(ADC_value[index*4+2])/3300)*1000000); //io amp
 
-        usb_printf("[%u] %d %f %f %f %f %f\r\n",
-				    uCurrentClk,
-				    index,
-            VOL(ADC_value[index*4]),     /*vcc*/
-            VOL(ADC_value[index*4+1]),   /*clk*/
-				    VOL(ADC_value[index*4+2]),   /*io*/
-				    VOL(ADC_value[index*4+3]),   /*rst*/
-				    (VOL(ADC_value[index*4+2])/3300)*1000000); /*io amp*/
-        
+#endif        
         if (LauchTestCaseFlag == 1)
         {
             curVcc_v = VOL(ADC_value[index*4]);         /*vcc*/
@@ -296,7 +302,6 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -305,16 +310,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while(1){
     /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-    if(IC_DONE_FLAG == 1)  // 如果完成一次高电平捕获
-    {
-        IC_DONE_FLAG = 0;  // 标志清零
-        time = IC_TIMES * 1000;  // 脉冲时间为捕获次数 * 1000us
-        time += IC_VALUE;  // 加上捕获时间（小于1ms的部分）
-        printf("High level: %d us\n", time);
-    }
-
     switch(workState){
         case INIT_STATE:
             /* Initialize all configured peripherals */

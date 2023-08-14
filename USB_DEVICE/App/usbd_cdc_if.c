@@ -343,15 +343,7 @@ void DevReset(uint8_t *inBuf)
 {
     //CDC_Transmit_FS((uint8_t *)"DevReset\r\n", 10);
     //CDC_Transmit_FS((uint8_t *)USB_COM.RecBuf, (uint16_t)USB_COM.RecLen);
-	//HAL_NVIC_SystemReset();
-	char errInfo[256] = {0};
-	SYS_EXCEPTION_INFO_T errInfoPkt = {0};
-	errInfoPkt.pktLen = stm32_htons(sizeof(SYS_START_UP_INFO_T));
-	errInfoPkt.pktType = stm32_htons(0x8001);
-	errInfoPkt.errInfoLen = stm32_htons(6);
-	errInfoPkt.version = stm32_htons(0x10);
-	strcpy(errInfoPkt.errInfo, errInfo);
-	CDC_Transmit_FS((uint8_t *)&errInfoPkt, errInfoPkt.pktLen);
+	  HAL_NVIC_SystemReset();
 }
 
 void ProSetting(uint8_t *inBuf)
