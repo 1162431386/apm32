@@ -103,7 +103,6 @@ void sys_exception_info_report(char *errInfo)
      CDC_Transmit_FS((uint8_t *)&errInfoPkt, errInfoPkt.pktLen);
      return;
 }
-
 void te_init_pwr_seq(uint8_t *TePwrSeqState, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
     switch(*TePwrSeqState) {
@@ -118,10 +117,12 @@ void te_init_pwr_seq(uint8_t *TePwrSeqState, float curVcc_v, float curClk_v, flo
             break;
         case PWR_OFF:
             if ((curTeVccState(curVcc_v) == CLASS_B_3V3_DEV) || (curTeVccState(curVcc_v) == CLASS_C_1V8_DEV))
-            {    /*start clk check timer*/
-                HAL_GPIO_WritePin(CLK_CNT_EN_GPIO_Port, CLK_CNT_EN_Pin, GPIO_PIN_SET);
-                HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);  /* 使能定时�??1的PWM输入捕获 */
-                __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
+            {
+								 /* 使能定时TIM4的PWM输入捕获 */
+								HAL_GPIO_WritePin(CLK_CNT_EN_GPIO_Port, CLK_CNT_EN_Pin, GPIO_PIN_SET);
+								HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);  
+								__HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
+				
                 if (curTeVccState(curVcc_v) == CLASS_B_3V3_DEV)
                     *TePwrSeqState = VCC_3V3_STABLE;
                 if (curTeVccState(curVcc_v) == CLASS_C_1V8_DEV)
@@ -145,30 +146,28 @@ void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, f
             }
             break;
         case VCC_3V3_CLK_STABLE:
-            if (isHighZ(curVcc_v, curIo_v) == 'Z'){
-                break;
-            }
-
-            if ((g_uClockCnt - g_pro_clk_cnt)>= 200) {
-                *TePwrSeqState = VCC_3V3_IO_STABLE;
-            } else {
-                TePreErrState = VCC_3V3_CLK_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            }
+					  usb_printf("IO >>>>>>>> [%u, %u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curIo_v);
+            if(isHighZ(curVcc_v, curIo_v) != 'Z'){
+						    if ((g_uClockCnt - g_pro_clk_cnt) <= 200){
+                    *TePwrSeqState = VCC_3V3_IO_STABLE;
+                } else {
+                    TePreErrState = VCC_3V3_IO_STABLE;
+                   *TePwrSeqState = PWR_FAIL;
+                }						
+						}
             break;
         case VCC_3V3_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'L') {
-                break;
-            }
-
-            if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
-                *TePwrSeqState = VCC_3V3_NORMAL_STATE;
-            } else {
-                TePreErrState = VCC_3V3_IO_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            }
-
+					 usb_printf("RST >>>>>>>> [%u, %u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curRst_v);
+            if (TeRstLevel(curRst_v) != 'L') {
+                if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
+                    *TePwrSeqState = VCC_3V3_NORMAL_STATE;
+                } else {
+                    TePreErrState = VCC_3V3_IO_STABLE;
+                    *TePwrSeqState = PWR_FAIL;
+                } 
+					  }
             break;
+
         case VCC_3V3_NORMAL_STATE:
             *TePwrSeqState = VCC_SWTICH_TO_5V;
             clkStableFlag = 0;
@@ -181,6 +180,7 @@ void te_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, f
 /*1v8 terminal start course*/   
 void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, float curClk_v, float curIo_v, float curRst_v)
 {
+	  uint8_t high_z = 0;
     switch(*TePwrSeqState){
         case VCC_1V8_STABLE:
             if (clkStableFlag == 1) {
@@ -190,27 +190,26 @@ void te_1v8_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v, f
             }
             break;
         case VCC_1V8_CLK_STABLE:
-            if (isHighZ(curVcc_v, curIo_v) == 'Z')
-                break;
-
-            if ((g_uClockCnt - g_pro_clk_cnt) >= 200) {
-                *TePwrSeqState = VCC_1V8_IO_STABLE;
-            } else {
-                TePreErrState = VCC_1V8_CLK_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            }
+					  usb_printf("IO >>>>>>>> [%u,%u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curIo_v);
+            if(isHighZ(curVcc_v, curIo_v) != 'Z'){
+						    if ((g_uClockCnt - g_pro_clk_cnt) <= 200){
+                    *TePwrSeqState = VCC_1V8_IO_STABLE;
+                } else {
+                    TePreErrState = VCC_1V8_CLK_STABLE;
+                   *TePwrSeqState = PWR_FAIL;
+                }						
+						}
             break;
         case VCC_1V8_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'L') {
-                break;
-            }
-
-            if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
-                *TePwrSeqState = VCC_1V8_NORMAL_STATE;
-            } else {
-                TePreErrState = VCC_1V8_IO_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            } 
+					 usb_printf("RST >>>>>>>> [%u,%u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curRst_v);
+            if (TeRstLevel(curRst_v) != 'L') {
+                if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
+                    *TePwrSeqState = VCC_1V8_NORMAL_STATE;
+                } else {
+                    TePreErrState = VCC_1V8_IO_STABLE;
+                    *TePwrSeqState = PWR_FAIL;
+                } 
+					  }
             break;
         case VCC_1V8_NORMAL_STATE:
             *TePwrSeqState = VCC_SWTICH_TO_3V3;
@@ -231,29 +230,30 @@ void te_2nd_5v_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_v
                 *TePwrSeqState = VCC_5V_CLK_STABLE;
             }
             break;
+						
         case VCC_5V_CLK_STABLE:
-                if(isHighZ(curVcc_v, curIo_v) == 'Z') {
-                    break;
-                }
-                if (curClock >= 200) {
+					  usb_printf("IO >>>>>>>> [%u,%u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curIo_v);
+            if(isHighZ(curVcc_v, curIo_v) != 'Z'){
+						    if ((g_uClockCnt - g_pro_clk_cnt) <= 200){
                     *TePwrSeqState = VCC_5V_IO_STABLE;
                 } else {
-                    TePreErrState = VCC_5V_CLK_STABLE;
-                    *TePwrSeqState = PWR_FAIL;
-                }
+                    TePreErrState = VCC_5V_IO_STABLE;
+                   *TePwrSeqState = PWR_FAIL;
+                }						
+						}
             break;
         case VCC_5V_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'L') {
-                break;
-            }
-
-            if (curClock >= 400) {
-                *TePwrSeqState = VCC_5V_NORMAL_STATE;
-            } else {
-                TePreErrState = VCC_5V_IO_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            }
+					 usb_printf("RST >>>>>>>> [%u,%u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curRst_v);
+            if (TeRstLevel(curRst_v) != 'L') {
+                if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
+                    *TePwrSeqState = VCC_5V_NORMAL_STATE;
+                } else {
+                    TePreErrState = VCC_5V_IO_STABLE;
+                    *TePwrSeqState = PWR_FAIL;
+                } 
+					  }
             break;
+
         default:
             break;
     }
@@ -270,27 +270,28 @@ void te_2nd_3v3_pwr_seq(uint8_t *TePwrSeqState, uint32_t curClock, float curVcc_
             }
             break;
         case VCC_2nd_3V3_CLK_STABLE:
-            if (isHighZ(curVcc_v, curIo_v) == 'Z') {
-                break;
-            }
-            if (curClock >= 200) {
-                *TePwrSeqState = VCC_3V3_IO_STABLE;
-            } else {
-            TePreErrState = VCC_2nd_3V3_CLK_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            }
+					  usb_printf("IO >>>>>>>> [%u,%u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curIo_v);
+            if(isHighZ(curVcc_v, curIo_v) != 'Z'){
+						    if ((g_uClockCnt - g_pro_clk_cnt) <= 200){
+                    *TePwrSeqState = VCC_3V3_IO_STABLE;
+                } else {
+                    TePreErrState = VCC_2nd_3V3_CLK_STABLE;
+                   *TePwrSeqState = PWR_FAIL;
+                }						
+						}
             break;
         case VCC_2nd_3V3_IO_STABLE:
-            if (TeRstLevel(curRst_v) == 'L') {
-                break;
-            }
-            if (curClock >= 400) {
-                *TePwrSeqState = VCC_3V3_NORMAL_STATE;
-            } else {
-                TePreErrState = VCC_2nd_3V3_IO_STABLE;
-                *TePwrSeqState = PWR_FAIL;
-            }
+					 usb_printf("RST >>>>>>>> [%u,%u] %u %u\r\n", g_uClockCnt, g_pro_clk_cnt, curVcc_v, curRst_v);
+            if (TeRstLevel(curRst_v) != 'L') {
+                if ((g_uClockCnt - g_pro_clk_cnt) >= 400) {
+                    *TePwrSeqState = VCC_3V3_NORMAL_STATE;
+                } else {
+                    TePreErrState = VCC_2nd_3V3_IO_STABLE;
+                    *TePwrSeqState = PWR_FAIL;
+                } 
+					  }
             break;
+
         default:
             break;
     }

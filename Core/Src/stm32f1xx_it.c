@@ -254,15 +254,25 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 /**
   * @brief This function handles TIM4 global interrupt.
   */
+void usb_printf(const char *format, ...);
+
 void TIM4_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM4_IRQn 0 */
+  uint32_t val = 0;
 
   /* USER CODE END TIM4_IRQn 0 */
   HAL_TIM_IRQHandler(&htim4);
+  
   /* USER CODE BEGIN TIM4_IRQn 1 */
-  g_uClockCnt++;
-  clkStableFlag = 1;
+  val = HAL_TIM_ReadCapturedValue(&htim4,TIM_CHANNEL_1);
+  //if (val >0)
+  //{
+    g_uClockCnt++;
+    clkStableFlag = 1;
+	  usb_printf("[%d,%u,%u]\r\n", clkStableFlag, g_uClockCnt, val);
+  //}
+ 
   /* USER CODE END TIM4_IRQn 1 */
 }
 

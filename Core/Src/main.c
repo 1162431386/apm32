@@ -180,34 +180,34 @@ uint32_t ADC_MultiChannelPolling(uint8_t *packet)
             bitLen += 12;
         }
 
-        if (ADC_value[index*4+3] != lastRstData)
+        if (ADC_value[index*4+2] != lastRstData)
         {
             data.Pin = data.Pin | BIT1;
             if (bitLen == 12) { /* 数据中包含时钟�?�和电压�? */
-                data.Data1 = ADC_value[index*4+3];
+                data.Data1 = ADC_value[index*4+2];
             } else if (bitLen == 0){ /* 数据中包含时钟�?�或电压�? */
-                data.Data0 = ADC_value[index*4+3];
+                data.Data0 = ADC_value[index*4+2];
             } else {
                 //print error
             }
             bitLen += 12;
-            lastRstData = ADC_value[index*4+3];
+            lastRstData = ADC_value[index*4+2];
         }
 
-        if (ADC_value[index*4+2] != lastIOData)
+        if (ADC_value[index*4+1] != lastIOData)
         {
             data.Pin = data.Pin | BIT0;
             if (bitLen == 24){ /* 数据中包含时钟�?��?�电压�?�和IO�? */
-                data.Data2 = ADC_value[index*4+2];
+                data.Data2 = ADC_value[index*4+1];
             } else if (bitLen == 12) {
-                data.Data1 =  ADC_value[index*4+2];
+                data.Data1 =  ADC_value[index*4+1];
             } else if(bitLen == 0) {
-                data.Data0 = ADC_value[index*4+2];
+                data.Data0 = ADC_value[index*4+1];
             } else {
                 //error
             }
             bitLen += 12;
-            lastIOData = ADC_value[index*4+2];
+            lastIOData = ADC_value[index*4+1];
         }
 #if 0
         usb_printf("uCurrentClk = %u, curVcc_v = %f, curClk_v = %f, curIo_v = %f, Amp = %f, curRst_v = %f\r\n", 
@@ -219,18 +219,18 @@ usb_printf("[%u,%d] %f %f %f %f %f\r\n",
 		        uCurrentClk,                //clk
 				    index,                      
             VOL(ADC_value[index*4]),        //vcc
-            VOL(ADC_value[index*4+1]),      //clk
-				    VOL(ADC_value[index*4+2]),      //io
-				    VOL(ADC_value[index*4+3]),      //rst
-  			    (VOL(ADC_value[index*4+2])/3300)*1000000); //io amp
+            VOL(ADC_value[index*4+3]),      //clk
+				    VOL(ADC_value[index*4+1]),      //io
+				    VOL(ADC_value[index*4+2]),      //rst
+  			    (VOL(ADC_value[index*4+1])/3300)*1000000); //io amp
 
 #endif        
         if (LauchTestCaseFlag == 1)
         {
             curVcc_v = VOL(ADC_value[index*4]);         /*vcc*/
-            curClk_v = VOL(ADC_value[index*4+1]);       /*clk*/
-            curIo_v  = VOL(ADC_value[index*4+2]);       /*io*/
-            curRst_v = VOL(ADC_value[index*4+3]);       /*rst*/
+            curClk_v = VOL(ADC_value[index*4+3]);       /*clk*/
+            curIo_v  = VOL(ADC_value[index*4+1]);       /*io*/
+            curRst_v = VOL(ADC_value[index*4+2]);       /*rst*/
             //curVccAmp = vcc_amp_count(ADC_value[4], ADC_value[5]);
             if (ClkLevel(curClk_v) == 'H'){
                 HAL_GPIO_WritePin(DATA_GPIO_Port, DATA_Pin, GPIO_PIN_SET);
@@ -267,7 +267,7 @@ usb_printf("[%u,%d] %f %f %f %f %f\r\n",
         packet_index += dataLength;
     }
     
-		*((uint16_t *)packet) = stm32_htons(packet_index);
+	*((uint16_t *)packet) = stm32_htons(packet_index);
     return packet_index;
 }
 
@@ -282,7 +282,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
   uint32_t sendLen = 0;
   uint8_t sampleInit = 0;
-    uint32_t time = 0;
+  uint32_t time = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -310,6 +310,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while(1){
     /* USER CODE END WHILE */
+		/* USER CODE BEGIN 3 */
     switch(workState){
         case INIT_STATE:
             /* Initialize all configured peripherals */
@@ -321,21 +322,21 @@ int main(void)
             MX_RTC_Init();
             TePwrSeqState = INIT;
             TePreErrState = INIT;
-				    HAL_GPIO_WritePin(CLK_CNT_EN_GPIO_Port, CLK_CNT_EN_Pin, GPIO_PIN_RESET);
+		    HAL_GPIO_WritePin(CLK_CNT_EN_GPIO_Port, CLK_CNT_EN_Pin, GPIO_PIN_RESET);
 
             workState = IDLE_STATE;
-				    HAL_Delay(500);
+		    HAL_Delay(500);
             break;
         case IDLE_STATE:
             if (StartSamplingFlag == 1) {
-								startup_info_report();
+				startup_info_report();
                 workState = SAMPLE_STATE;
             }
             else
                 HAL_Delay(100);
             break;
         case SAMPLE_STATE:
-            if ((sampleInit == 0) && (StartSamplingFlag == 1)){
+            if ((sampleInit == 0) && (StartSamplingFlag == 1)) {
                 HAL_ADCEx_Calibration_Start(&hadc1);
                 HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&ADC_value, ADC_CHANNEL_CNT * SAMPLING_COUNT);
                 HAL_GPIO_WritePin(GPIOB, LOCAL_Pin, GPIO_PIN_SET);
@@ -345,36 +346,35 @@ int main(void)
             {
                 sendLen = ADC_MultiChannelPolling(sendBuf);
 
-                if ((HAL_GetTick()%1000)==0)
+                if ((HAL_GetTick()%1000) == 0)
                     HAL_GPIO_TogglePin(DATA_GPIO_Port, DATA_Pin);
 
                 //CDC_Transmit_FS(sendBuf, sendLen);
             }
-            if(LauchTestCaseFlag == 1) {
+            if (LauchTestCaseFlag == 1) {
                 g_caseState = execTestCase(g_caseNumber, sendBuf);
-						}
-						else
-						{
-							  workState = TEST_END_STATE;
-						}
-
+            }
+            else
+            {
+                workState = TEST_END_STATE;
+            }
             break;
         case TEST_END_STATE:
             if ((LauchTestCaseFlag == 0) && (g_testEndFlag == 0)) {
                 endTestCase(g_caseNumber, &g_caseState);
-							  g_testEndFlag = 1;
-						}
+				g_testEndFlag = 1;
+			}
 						
-						if (StartSamplingFlag == 1)
-							  workState = SAMPLE_STATE;
-						else{
+            if (StartSamplingFlag == 1)
+                  workState = SAMPLE_STATE;
+            else {
                 /*stop adc
                   stop tm
                   stop rtc
                 */
                 workState = IDLE_STATE;
                 HAL_GPIO_WritePin(GPIOB, LOCAL_Pin, GPIO_PIN_RESET);						
-						}
+			}
             break;
         default:
             ;

@@ -1,6 +1,8 @@
 #include "main.h"
 #include "stdlib.h"
 #include "common.h"
+#include "usbd_cdc.h"
+#include "usbd_cdc_if.h"
 
 uint32_t g_terminalClass  = CLASS_POWER_OFF_DEV;
 float g_vccValue = 0.0;
@@ -136,28 +138,26 @@ char VppLevel(float x)  /*programing vpp/C6, see <ts_102221v15 chap 5.1.3>*/
     return 'E';		
 }
 
-
-
 char isHighZ(float curVcc_v,  float x)
 {
-	  float Amp = (VOL(x)/3300)*1000000;
+    float Amp = (x / 3300 - 3.3/(10000 + 1700 + 3300)) * 1000000 ;
+   if (TePwrState() == CLASS_A_5V_DEV){
+        if(((x > 0.7 * curVcc_v) && (x < (curVcc_v + 0.3))) && ((Amp >= 20 * 0.8) && (Amp <= 20 * 1.2)) )
+            return 'Z';
+    } else if ((TePwrState() == CLASS_B_3V3_DEV) || (TePwrState() == CLASS_C_1V8_DEV)){
+        if((((x > 0.7 * curVcc_v) && (x < (curVcc_v + 0.3)))) && ((Amp >= 20 * 0.8) && (Amp <= 20 * 1.2)) )
+            return 'Z';
+    }
 
-	  if(TePwrState() == CLASS_A_5V_DEV){
-			if(((VOL(x) > 0.7 * curVcc_v) && (VOL(x) < (curVcc_v + 0.3))) && (Amp == 20))
-				return 'Z';
-		}else if((TePwrState() == CLASS_B_3V3_DEV) || (TePwrState() == CLASS_C_1V8_DEV)){
-			if(((VOL(x) > 0.7 * curVcc_v) && (VOL(x) < (curVcc_v + 0.3))) && (Amp == 20))
-				return 'Z';
-		}
-
-	  return 'E';
+    return 'E';
 }
-		
+
 char isStateA(float curVcc_v, float x)
 {
-	  float Amp = (VOL(x)/3300)*1000000;
+	  float Amp = (x / 3300 - 3.3/(10000 + 1700 + 3300)) * 1000000 ;
 	  if((TePwrState() == CLASS_A_5V_DEV) || (TePwrState() == CLASS_B_3V3_DEV) || (TePwrState() == CLASS_C_1V8_DEV)){
-			if((VOL(x) <= curVcc_v * 0.15 ) && (Amp <= 1000))
+			if((x <= curVcc_v * 0.15 ) && 
+			   (Amp >= 1000*0.8) && (Amp <= 1000 * 1.2))
 				return 'A';
 		}
 	  return 'E';

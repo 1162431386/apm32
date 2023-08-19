@@ -38,3 +38,13 @@ apm32\common.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
 apm32\common.o: ../Core/Inc/common.h
 apm32\common.o: ../Core/Inc/testCase.h
 apm32\common.o: ../Core/Inc/common.h
+apm32\common.o: ../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h
+apm32\common.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
+apm32\common.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h
+apm32\common.o: ../USB_DEVICE/Target/usbd_conf.h
+apm32\common.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+apm32\common.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+apm32\common.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h
+apm32\common.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
+apm32\common.o: ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h
+apm32\common.o: ../USB_DEVICE/App/usbd_cdc_if.h
